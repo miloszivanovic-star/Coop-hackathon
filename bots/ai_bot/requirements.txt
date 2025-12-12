@@ -1,6 +1,0 @@
-torch
-numpy
-gymnasium
-azure-ai-ml
-azure-identity
-python-dotenv
