@@ -134,6 +134,7 @@ def discover_bots() -> list[BotInterface]:
     for root, dirs, files in os.walk(bots_dir):
         # Skip interface and __pycache__ directories
         dirs[:] = [d for d in dirs if d not in skip_dirs]
+        print(files)
 
         for file in files:
             if file.endswith(".py") and not file.startswith("__"):

@@ -90,6 +90,15 @@ class BuiltinBotRegistry:
             is_builtin=True,
             created_at=datetime.now(),
         ),
+        "builtin_sample_4": Player(
+            player_id="builtin_sample_4",
+            player_name="Ultimate Ninja Bot",
+            submitted_from="builtin",
+            sprite_path="assets/wizards/ai_bot.png",
+            minion_sprite_path="assets/minions/ai_minion.png",
+            is_builtin=True,
+            created_at=datetime.now(),
+        ),
     }
 
     # Built-in bot configurations
@@ -136,6 +145,13 @@ class BuiltinBotRegistry:
             "difficulty": "hard",
             "description": "Deep learning-based bot using DQN for optimal strategies",
         },
+        "sample_bot_4": {
+            "player_id": "builtin_sample_1",
+            "bot_module": "bots.sample_bot4.sample_bot_4",
+            "bot_class": "UltimateBot",
+            "difficulty": "hard",
+            "description": "The Ultimate Ninja Bot - combines speed and precision for advanced play",
+        }
     }
 
     @classmethod
