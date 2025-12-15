@@ -92,6 +92,11 @@ class IvraBot(BotInterface):
         # Threshold 62
         if opp_hp < 62 and my_hp > 30:
             W_AGGRO = 78.6 # Extreme Nuke Value
+        
+        # v18.0: FINISHER MODE - when opponent is critically low, go for the kill
+        FINISHER_MODE = opp_hp < 30 and my_hp > 20
+        if FINISHER_MODE:
+            W_AGGRO = 150.0  # Maximum aggression to finish the fight
 
         # --- Candidate Generation & Scoring ---
         candidates = []
@@ -193,11 +198,22 @@ class IvraBot(BotInterface):
             score += sim_mana * W_MANA
             
             # Artifact Control
-            # Bonus for being close to artifacts
+            # v17.1: Prioritize health artifacts to deny Elite sustain
             if artifacts:
                 closest_dist = min([manhattan_dist(sim_pos, a["position"]) for a in artifacts])
-                if closest_dist == 0: score += 15 # Picked up
-                else: score -= closest_dist * 0.5 # Penalty for distance
+                if closest_dist == 0: 
+                    score += 15 # Picked up
+                else: 
+                    score -= closest_dist * 0.5 # Penalty for distance
+                
+                # v17.1: Extra bonus for health artifacts
+                for a in artifacts:
+                    if a["type"] == "health":
+                        health_dist = manhattan_dist(sim_pos, a["position"])
+                        if health_dist == 0:
+                            score += 40  # High priority for health artifacts
+                        elif health_dist <= 3:
+                            score += 20 - health_dist * 3  # Bonus for being near health
                 
             # Positioning - Map Control (v9.0)
             # Center is [4.5, 4.5] roughly. Use [4,4] or [5,5].
@@ -268,17 +284,23 @@ class IvraBot(BotInterface):
             # Option C: Move + Melee
             if cooldowns["melee_attack"] == 0:
                  new_pos = [my_pos[0]+dx, my_pos[1]+dy]
-                 # Find target
-                 target = None
+                 # v16.0: Check ALL targets (wizard + enemy minions)
+                 targets = []
                  if manhattan_dist(new_pos, opp_pos) == 1:
-                     target = opp_pos
-                 # Check minions
-                 # (Simplified: prioritize wizard)
-                 if target:
-                     s = score_action("melee_attack", target=target, move_vec=move_vec)
+                     targets.append(("wizard", opp_pos))
+                 # Check enemy minions
+                 for m in minions:
+                     if m["owner"] != self.name and manhattan_dist(new_pos, m["position"]) == 1:
+                         targets.append(("minion", m["position"]))
+                 
+                 for target_type, target_pos in targets:
+                     s = score_action("melee_attack", target=target_pos, move_vec=move_vec)
+                     # v16.0: +30 bonus for killing enemy minions
+                     if target_type == "minion":
+                         s += 30
                      if s > best_score:
                          best_score = s
-                         best_action = {"move": move_vec, "spell": {"name": "melee_attack", "target": target}}
+                         best_action = {"move": move_vec, "spell": {"name": "melee_attack", "target": target_pos}}
 
             # Option D: Move + Shield
             if cooldowns["shield"] == 0 and my_mana >= 20 and not self_data.get("shield_active"):
