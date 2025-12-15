@@ -371,9 +371,28 @@ class EliteBot(BotInterface):
         # Determine strategy based on HP differential and resources
         hp_advantage = hp - opp_hp
         
+        # CRITICAL: AGGRESSIVE FINISHING - When opponent is critically low, finish them immediately
+        # This must be FIRST priority to prevent games from dragging on
+        if opp_hp <= 25 and hp >= 40:
+            # Close distance for kill - ignore artifacts and other distractions
+            move = self._smart_move_toward(self_pos, opp_pos, collision_risk, opp_pos, own_minions)
+        
         # DEFENSIVE POSITIONING: Retreat if severely wounded
-        if hp <= 35 and hp_advantage < -20:
+        elif hp <= 35 and hp_advantage < -20:
             move = self._tactical_retreat(self_pos, opp_pos, all_enemies, artifacts)
+        
+        # SPLASH DAMAGE AVOIDANCE: If opponent can fireball and we're in splash range, maintain distance
+        # This prevents taking 4 splash damage repeatedly
+        elif (opp_can_fireball and opp_in_fireball_range and 
+              current_dist <= 6 and self._manhattan_dist(self_pos, opp_pos) <= 2):
+            # We're too close to predicted fireball target (opponent position)
+            # Move to maintain fireball range (3-5) but avoid splash range (≤1 Manhattan distance)
+            if current_dist <= 2:
+                # Too close for splash safety, back up
+                move = self._move_away_from(self_pos, opp_pos)
+            else:
+                # Strafe to maintain distance while avoiding predictable patterns
+                move = self._strafe_movement(self_pos, opp_pos)
         
         # ARTIFACT PRIORITY: CRITICAL for health when < 30%, collect if resources low
         elif artifacts and (hp < 30 or mana <= 50 or hp <= 60):
@@ -387,7 +406,7 @@ class EliteBot(BotInterface):
                 
                 # PRIORITY: Always go for health when HP < 30% (even if risky)
                 if hp < 30 and best_artifact["type"] == "health":
-                    move = self._smart_move_toward(self_pos, best_artifact["position"], collision_risk, opp_pos)
+                    move = self._smart_move_toward(self_pos, best_artifact["position"], collision_risk, opp_pos, own_minions)
                 # Only collect if safe, otherwise fight
                 elif artifact_safe:
                     # Check if artifact is contested
@@ -395,7 +414,7 @@ class EliteBot(BotInterface):
                     opp_dist = chebyshev_dist(opp_pos, best_artifact["position"])
                     
                     if our_dist <= opp_dist + 1:  # We can get there first
-                        move = self._smart_move_toward(self_pos, best_artifact["position"], collision_risk, opp_pos)
+                        move = self._smart_move_toward(self_pos, best_artifact["position"], collision_risk, opp_pos, own_minions)
                     else:
                         # Artifact contested, engage opponent
                         move = self._optimal_positioning(self_pos, opp_pos, hp, opp_hp, collision_risk, own_minions, enemy_minions)
@@ -529,6 +548,15 @@ class EliteBot(BotInterface):
         own_minions = own_minions or []
         enemy_minions = enemy_minions or []
         
+        # CRITICAL FIX: Aggressive finishing when opponent is critically low HP
+        # When opponent ≤25 HP and we have resources, close distance and finish immediately
+        if opp_hp <= 25 and my_hp >= 40:
+            # Close to fireball or melee range aggressively
+            if dist > 1:
+                return self._smart_move_toward(my_pos, opp_pos, collision_risk, opp_pos)
+            else:
+                return [0, 0]  # In melee range, hold position for melee attack
+        
         # TACTICAL POSITIONING: Use minions as cover when low HP
         if my_hp <= 40 and own_minions:
             # Find if we can position behind a friendly minion
@@ -620,20 +648,48 @@ class EliteBot(BotInterface):
             else:
                 return self._smart_move_toward(my_pos, opp_pos, collision_risk, opp_pos)
     
-    def _smart_move_toward(self, my_pos, target_pos, collision_risk, opp_pos):
-        """Move toward target while avoiding collisions"""
-        if collision_risk:
-            # Take alternate route
-            dx = target_pos[0] - my_pos[0]
-            dy = target_pos[1] - my_pos[1]
-            
+    def _smart_move_toward(self, my_pos, target_pos, collision_risk, opp_pos, own_minions=None):
+        """Move toward target while avoiding collisions with opponents AND own minions"""
+        own_minions = own_minions or []
+        
+        # Calculate intended move
+        dx = target_pos[0] - my_pos[0]
+        dy = target_pos[1] - my_pos[1]
+        step_x = 1 if dx > 0 else -1 if dx < 0 else 0
+        step_y = 1 if dy > 0 else -1 if dy < 0 else 0
+        
+        intended_pos = [my_pos[0] + step_x, my_pos[1] + step_y]
+        
+        # CRITICAL FIX: Check for own minion collision
+        minion_collision = False
+        for minion in own_minions:
+            if minion["position"] == intended_pos:
+                minion_collision = True
+                break
+        
+        # If collision detected (opponent or own minion), take alternate route
+        if collision_risk or minion_collision:
             # Try moving in one direction only first
-            if abs(dx) > abs(dy):
-                return [1 if dx > 0 else -1, 0]
+            # Try horizontal first
+            alt_pos_x = [my_pos[0] + step_x, my_pos[1]]
+            x_blocked = any(m["position"] == alt_pos_x for m in own_minions)
+            
+            # Try vertical
+            alt_pos_y = [my_pos[0], my_pos[1] + step_y]
+            y_blocked = any(m["position"] == alt_pos_y for m in own_minions)
+            
+            # Choose non-blocked direction, prefer larger delta
+            if not x_blocked and abs(dx) >= abs(dy):
+                return [step_x, 0]
+            elif not y_blocked:
+                return [0, step_y]
+            elif not x_blocked:
+                return [step_x, 0]
             else:
-                return [0, 1 if dy > 0 else -1]
+                # Both blocked, try diagonal
+                return [0, 0]  # Stay put if all options blocked
         else:
-            return self._move_toward(my_pos, target_pos)
+            return [step_x, step_y]
     
     def _maintain_optimal_range(self, my_pos, target_pos, min_range, max_range):
         """Maintain position within optimal range"""
