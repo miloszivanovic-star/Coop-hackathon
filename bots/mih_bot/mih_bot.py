@@ -1,21 +1,24 @@
 """
-Mih Bot - Optimized Elite Tactical Wizard
+Mih Bot V4 - Scoring System Edition
 
-OPTIMIZED STRATEGY (Based on tournament analysis):
-1. MINION MASTER FOCUS: Like the #1 bot (89.1% win rate), prioritize sustained minion pressure
-   - Early and consistent minion summoning for 10 dmg/turn DPS
-   - Aggressive mana artifact collection to sustain minion spam
-   
-2. ADAPTIVE MODE SWITCHING: Like the #2 bot (82.7% win rate), dynamically adapt strategy
-   - Aggressive mode: HP advantage or late game (turn >= 50)
-   - Defensive mode: HP disadvantage >= 20
-   - Resource mode: Low HP/mana, prioritize artifact collection
-   - Minion Master mode: Maintain minion pressure while supporting with spells
-   
-3. MELEE SUPREMACY: Melee bypasses shields (10 dmg, 0 mana) - maximize usage
-4. PREDICTIVE ATTACKS: Fire at predicted positions for splash damage
-5. RESOURCE EFFICIENCY: Shield blocks 20 dmg for 20 mana (100% efficient)
-6. TACTICAL POSITIONING: Control distance and force advantageous engagements
+STRATEGY: Use IvraBot's SCORING SYSTEM approach
+- Evaluate all possible move+spell combinations
+- Score based on: survival, damage dealt, positioning, artifacts
+- Pick highest scoring action
+
+KEY DIFFERENCES FROM PREVIOUS ATTEMPTS:
+- NO hardcoded modes that force bad decisions
+- Every decisi            # Teleport to artifacts - PRIORITIZE denying health to wounded opponents
+            if cooldowns["teleport"] == 0 and mana >= 20:
+                for a in artifacts:
+                    s = score_action([0, 0], "teleport", a["position"])
+                    # INTERCEPTOR BONUS: if opponent is wounded and this is a health artifact
+                    # they are very likely to teleport here - get there first!
+                    if a["type"] == "health" and opp_hp < 50:
+                        s += 100  # Strong priority to intercept
+                    candidates.append((s, [0, 0], {"name": "teleport", "target": a["position"]})) evaluated holistically
+- Survival is weighted VERY high to avoid deaths
+- Aggression scales with opponent HP damage
 """
 
 from bots.bot_interface import BotInterface
@@ -26,9 +29,6 @@ class MihBot(BotInterface):
         self._name = "Mih Bot"
         self._sprite_path = "assets/wizards/mih_bot.svg"
         self._minion_sprite_path = "assets/minions/mih_minion.svg"
-        self._last_opp_pos = None
-        self._turns_stationary = 0
-        self._opponent_pattern = []  # Track opponent movement history
 
     @property
     def name(self) -> str:
@@ -47,7 +47,6 @@ class MihBot(BotInterface):
         opp_data = state["opponent"]
         artifacts = state.get("artifacts", [])
         minions = state.get("minions", [])
-        turn = state.get("turn", 0)
         board_size = state.get("board_size", 10)
 
         self_pos = self_data["position"]
@@ -61,450 +60,296 @@ class MihBot(BotInterface):
         shield_active = self_data.get("shield_active", False)
         opp_shield = opp_data.get("shield_active", False)
 
-        # Track opponent movement patterns
-        if self._last_opp_pos == opp_pos:
-            self._turns_stationary += 1
-        else:
-            self._turns_stationary = 0
-        self._last_opp_pos = opp_pos
+        # Constants
+        FIREBALL_DMG = 20
+        MELEE_DMG = 5
+        HEAL_AMT = 20
+        SHIELD_BLOCK = 20
 
-        hp_advantage = hp - opp_hp
-        mana_advantage = mana - opp_mana
-
-        # DETERMINE COMBAT MODE (inspired by Adaptive Bot)
-        if hp <= 40 or mana <= 30:
-            mode = "resource"
-        elif hp_advantage >= 25 or turn >= 50:
-            mode = "aggressive"
-        elif hp_advantage <= -20:
-            mode = "defensive"
-        else:
-            mode = "minion_master"  # Default to sustained pressure strategy
-
-        move = [0, 0]
-        spell = None
-
-        # Helper functions
+        # Helpers
         def chebyshev(a, b):
             return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
 
         def manhattan(a, b):
             return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-        def move_toward(start, target):
-            dx = target[0] - start[0]
-            dy = target[1] - start[1]
-            return [
-                1 if dx > 0 else -1 if dx < 0 else 0,
-                1 if dy > 0 else -1 if dy < 0 else 0,
-            ]
+        def is_valid(pos):
+            return 0 <= pos[0] < board_size and 0 <= pos[1] < board_size
 
-        def move_away(start, target):
-            toward = move_toward(start, target)
-            return [-toward[0], -toward[1]]
-
-        def clamp_pos(pos):
-            return [max(0, min(board_size - 1, pos[0])), max(0, min(board_size - 1, pos[1]))]
-
-        def predict_opponent_move():
-            """Enhanced prediction based on opponent state and behavior."""
-            # If opponent is stationary (likely casting), predict they stay
-            if self._turns_stationary >= 1:
-                return [0, 0]
-            
-            # Low resources = artifact hunting
-            if artifacts and (opp_mana <= 60 or opp_hp <= 60):
-                nearest_artifact = min(
-                    artifacts, key=lambda a: chebyshev(opp_pos, a["position"])
-                )
-                if chebyshev(opp_pos, nearest_artifact["position"]) <= 5:
-                    return move_toward(opp_pos, nearest_artifact["position"])
-            
-            # Aggressive bots charge forward
-            if opp_mana <= 30:
-                return move_toward(opp_pos, self_pos)
-            
-            # Defensive bots retreat when low HP
-            if opp_hp <= 40 and hp > opp_hp:
-                return move_away(opp_pos, self_pos)
-            
-            # Default: move toward us
-            return move_toward(opp_pos, self_pos)
-
-        def get_predicted_opp_pos():
-            """Get the predicted position of opponent next turn."""
-            opp_move = predict_opponent_move()
-            return clamp_pos([opp_pos[0] + opp_move[0], opp_pos[1] + opp_move[1]])
-
-        def get_splash_target():
-            """Get optimal fireball target for splash damage."""
-            predicted = get_predicted_opp_pos()
-            # If opponent likely won't move, aim adjacent for guaranteed splash
-            if predicted == opp_pos:
-                # Aim at adjacent tile they might move to
-                for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-                    target = [opp_pos[0] + dx, opp_pos[1] + dy]
-                    if 0 <= target[0] < board_size and 0 <= target[1] < board_size:
-                        return target
-            return predicted
-
-        # Count minions
-        enemy_minions = [m for m in minions if m["owner"] != self_data["name"]]
+        # =====================================================
+        # PRIORITY CHECK: Can we kill opponent THIS TURN?
+        # This prevents them from escaping with teleport/blink
+        # =====================================================
+        effective_opp_hp = opp_hp
+        if opp_shield:
+            effective_opp_hp = opp_hp + SHIELD_BLOCK  # Account for shield
+        
+        # Check for fireball kill
+        can_fireball = cooldowns["fireball"] == 0 and mana >= 30
+        in_fireball_range = chebyshev(self_pos, opp_pos) <= 5
+        
+        if can_fireball and in_fireball_range and effective_opp_hp <= FIREBALL_DMG:
+            # EXECUTE! Fireball will kill them
+            return {"move": [0, 0], "spell": {"name": "fireball", "target": opp_pos}}
+        
+        # Check for melee kill - move adjacent then melee
+        can_melee = cooldowns["melee_attack"] == 0
+        if can_melee and effective_opp_hp <= MELEE_DMG:
+            # Find a move that puts us adjacent to opponent
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    new_pos = [self_pos[0] + dx, self_pos[1] + dy]
+                    if is_valid(new_pos) and manhattan(new_pos, opp_pos) == 1:
+                        return {"move": [dx, dy], "spell": {"name": "melee_attack", "target": opp_pos}}
+        
+        # Check for fireball + splash combo (opponent near minion or wall)
+        # Splash damage is 4 for adjacent cells
+        if can_fireball and in_fireball_range and effective_opp_hp <= FIREBALL_DMG + 4:
+            # Direct hit is most reliable for kill
+            if effective_opp_hp <= FIREBALL_DMG:
+                return {"move": [0, 0], "spell": {"name": "fireball", "target": opp_pos}}
+        # Identify minions
         my_minions = [m for m in minions if m["owner"] == self_data["name"]]
+        enemy_minions = [m for m in minions if m["owner"] != self_data["name"]]
         has_minion = len(my_minions) > 0
 
-        # Calculate distances
-        dist_to_opp = chebyshev(self_pos, opp_pos)
-        manhattan_to_opp = manhattan(self_pos, opp_pos)
-
-        # Find all adjacent enemies (wizards and minions)
-        adjacent_enemies = []
-        if manhattan_to_opp == 1:
-            adjacent_enemies.append({"pos": opp_pos, "hp": opp_hp, "is_wizard": True})
-        for m in enemy_minions:
-            if manhattan(self_pos, m["position"]) == 1:
-                adjacent_enemies.append({"pos": m["position"], "hp": m["hp"], "is_wizard": False})
-
-        # Categorize artifacts
+        # Dynamic weights based on game state (IvraBot-inspired)
+        W_SURVIVAL = 3.0   # Lower base survival - be aggressive
+        W_AGGRO = 20.0     # High base aggro weight
+        
+        # Track turns using mana regeneration pattern (10 per turn from 100 start)
+        # Estimate turn: late game if both have used significant resources
+        hp_lost = (100 - hp) + (100 - opp_hp)
+        is_late_game = hp_lost > 60 or mana == 100  # Deep in fight
+        
+        # LATE GAME AGGRESSION: Force decisive action
+        if is_late_game:
+            W_AGGRO = 50.0  # Much more aggressive late
+            W_SURVIVAL = 2.0  # Accept more risk
+        
+        # Increase survival when critically low HP
+        if hp < 30:
+            W_SURVIVAL = 12.0
+        if hp < 20:
+            W_SURVIVAL = 25.0
+            
+        # BLOODLUST MODE - trigger finisher earlier to prevent escape
+        if opp_hp < 80 and hp > 30:
+            W_AGGRO = 60.0  # Start pressuring earlier
+        if opp_hp < 60 and hp > 25:
+            W_AGGRO = 100.0
+        if opp_hp < 45 and hp > 20:
+            W_AGGRO = 180.0  # FINISHER mode - kill before they escape!
+        
+        # Check if opponent likely to teleport to health artifact
         health_artifacts = [a for a in artifacts if a["type"] == "health"]
-        mana_artifacts = [a for a in artifacts if a["type"] == "mana"]
-        cooldown_artifacts = [a for a in artifacts if a["type"] == "cooldown"]
-
-        # ===== PRIORITY 0: IMMEDIATE LETHAL CHECKS =====
+        opp_likely_to_escape = opp_hp <= 40 and cooldowns.get("teleport", 99) == 0 and health_artifacts
         
-        # Melee kills (bypasses shields - melee does 5 damage)
-        if adjacent_enemies and cooldowns["melee_attack"] == 0:
-            for enemy in adjacent_enemies:
-                if enemy["is_wizard"] and enemy["hp"] <= 5:
-                    return {"move": [0, 0], "spell": {"name": "melee_attack", "target": enemy["pos"]}}
-        
-        # Fireball kills (must check shield)
-        if cooldowns["fireball"] == 0 and mana >= 30 and dist_to_opp <= 5:
-            if not opp_shield and opp_hp <= 20:
-                return {"move": [0, 0], "spell": {"name": "fireball", "target": opp_pos}}
-
-        # ===== EXECUTE MODE-BASED STRATEGY =====
-        
-        if mode == "aggressive":
-            return self._aggressive_mode(state, hp_advantage, has_minion)
-        elif mode == "defensive":
-            return self._defensive_mode(state, hp_advantage, has_minion)
-        elif mode == "resource":
-            return self._resource_mode(state, has_minion)
-        else:  # minion_master mode
-            return self._minion_master_mode(state, hp_advantage, has_minion)
-
-    def _aggressive_mode(self, state, hp_advantage, has_minion):
-        """All-out attack mode when we have HP advantage or late game."""
-        self_data = state["self"]
-        opp_data = state["opponent"]
-        board_size = state.get("board_size", 10)
-        
-        self_pos = self_data["position"]
-        opp_pos = opp_data["position"]
-        cooldowns = self_data["cooldowns"]
-        mana = self_data["mana"]
-        hp = self_data["hp"]
-        opp_shield = opp_data.get("shield_active", False)
-        
-        def chebyshev(a, b):
-            return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
-        
-        def manhattan(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-        
-        def move_toward(start, target):
-            dx = target[0] - start[0]
-            dy = target[1] - start[1]
-            return [
-                1 if dx > 0 else -1 if dx < 0 else 0,
-                1 if dy > 0 else -1 if dy < 0 else 0,
-            ]
-        
-        dist = chebyshev(self_pos, opp_pos)
-        
-        # MELEE priority - 10 damage, free
-        if manhattan(self_pos, opp_pos) == 1 and cooldowns["melee_attack"] == 0:
-            return {"move": [0, 0], "spell": {"name": "melee_attack", "target": opp_pos}}
-        
-        # BLINK into melee range
-        if cooldowns["blink"] == 0 and mana >= 10 and 1 < dist <= 2:
-            adj_positions = [
-                [opp_pos[0] + dx, opp_pos[1] + dy]
-                for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]
-                if 0 <= opp_pos[0] + dx < board_size and 0 <= opp_pos[1] + dy < board_size
-            ]
-            if adj_positions:
-                closest = min(adj_positions, key=lambda p: chebyshev(self_pos, p))
-                return {"move": [0, 0], "spell": {"name": "blink", "target": closest}}
-        
-        # FIREBALL for damage
-        if cooldowns["fireball"] == 0 and mana >= 30 and dist <= 5:
-            return {"move": move_toward(self_pos, opp_pos),
-                    "spell": {"name": "fireball", "target": opp_pos}}
-        
-        # TELEPORT to close gap if far
-        if cooldowns["teleport"] == 0 and mana >= 20 and dist > 4:
-            adj_positions = [
-                [opp_pos[0] + dx, opp_pos[1] + dy]
-                for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]
-                if 0 <= opp_pos[0] + dx < board_size and 0 <= opp_pos[1] + dy < board_size
-            ]
-            if adj_positions:
-                closest = min(adj_positions, key=lambda p: chebyshev(self_pos, p))
-                return {"move": [0, 0], "spell": {"name": "teleport", "target": closest}}
-        
-        # Just charge forward
-        return {"move": move_toward(self_pos, opp_pos), "spell": None}
-
-    def _defensive_mode(self, state, hp_advantage, has_minion):
-        """Defensive mode when at HP disadvantage - focus on survival."""
-        self_data = state["self"]
-        opp_data = state["opponent"]
-        artifacts = state.get("artifacts", [])
-        board_size = state.get("board_size", 10)
-        
-        self_pos = self_data["position"]
-        opp_pos = opp_data["position"]
-        cooldowns = self_data["cooldowns"]
-        mana = self_data["mana"]
-        hp = self_data["hp"]
-        shield_active = self_data.get("shield_active", False)
-        
-        def chebyshev(a, b):
-            return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
-        
-        def manhattan(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-        
-        def move_toward(start, target):
-            dx = target[0] - start[0]
-            dy = target[1] - start[1]
-            return [
-                1 if dx > 0 else -1 if dx < 0 else 0,
-                1 if dy > 0 else -1 if dy < 0 else 0,
-            ]
-        
-        def move_away(start, threat):
-            dx = start[0] - threat[0]
-            dy = start[1] - threat[1]
-            move_x = 1 if dx > 0 else -1 if dx < 0 else 0
-            move_y = 1 if dy > 0 else -1 if dy < 0 else 0
-            new_x = start[0] + move_x
-            new_y = start[1] + move_y
-            if not (0 <= new_x < board_size):
-                move_x = 0
-            if not (0 <= new_y < board_size):
-                move_y = 0
-            return [move_x, move_y]
-        
-        dist = chebyshev(self_pos, opp_pos)
-        health_artifacts = [a for a in artifacts if a["type"] == "health"]
-        
-        # SHIELD first if not active
-        if not shield_active and cooldowns["shield"] == 0 and mana >= 20:
-            return {"move": move_away(self_pos, opp_pos), "spell": {"name": "shield"}}
-        
-        # HEAL if low
-        if hp <= 70 and cooldowns["heal"] == 0 and mana >= 25:
-            return {"move": move_away(self_pos, opp_pos), "spell": {"name": "heal"}}
-        
-        # TELEPORT to health artifact
-        if health_artifacts and cooldowns["teleport"] == 0 and mana >= 20:
-            nearest = min(health_artifacts, key=lambda a: chebyshev(self_pos, a["position"]))
-            if chebyshev(self_pos, nearest["position"]) >= 3:
-                return {"move": [0, 0], "spell": {"name": "teleport", "target": nearest["position"]}}
-        
-        # Counter with MELEE if forced
-        if manhattan(self_pos, opp_pos) == 1 and cooldowns["melee_attack"] == 0:
-            return {"move": [0, 0], "spell": {"name": "melee_attack", "target": opp_pos}}
-        
-        # FIREBALL while kiting
-        if cooldowns["fireball"] == 0 and mana >= 30 and dist <= 5:
-            return {"move": move_away(self_pos, opp_pos),
-                    "spell": {"name": "fireball", "target": opp_pos}}
-        
-        # Just kite
-        return {"move": move_away(self_pos, opp_pos), "spell": None}
-
-    def _resource_mode(self, state, has_minion):
-        """Resource collection mode when low on HP/mana."""
-        self_data = state["self"]
-        opp_data = state["opponent"]
-        artifacts = state.get("artifacts", [])
-        board_size = state.get("board_size", 10)
-        
-        self_pos = self_data["position"]
-        opp_pos = opp_data["position"]
-        cooldowns = self_data["cooldowns"]
-        mana = self_data["mana"]
-        hp = self_data["hp"]
-        
-        def chebyshev(a, b):
-            return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
-        
-        def manhattan(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-        
-        def move_toward(start, target):
-            dx = target[0] - start[0]
-            dy = target[1] - start[1]
-            return [
-                1 if dx > 0 else -1 if dx < 0 else 0,
-                1 if dy > 0 else -1 if dy < 0 else 0,
-            ]
-        
-        def move_away(start, threat):
-            dx = start[0] - threat[0]
-            dy = start[1] - threat[1]
-            move_x = 1 if dx > 0 else -1 if dx < 0 else 0
-            move_y = 1 if dy > 0 else -1 if dy < 0 else 0
-            new_x = start[0] + move_x
-            new_y = start[1] + move_y
-            if not (0 <= new_x < board_size):
-                move_x = 0
-            if not (0 <= new_y < board_size):
-                move_y = 0
-            return [move_x, move_y]
-        
-        health_artifacts = [a for a in artifacts if a["type"] == "health"]
-        mana_artifacts = [a for a in artifacts if a["type"] == "mana"]
-        
-        # EMERGENCY HEAL
-        if hp <= 50 and cooldowns["heal"] == 0 and mana >= 25:
-            return {"move": move_away(self_pos, opp_pos), "spell": {"name": "heal"}}
-        
-        # TELEPORT to priority artifact
-        if artifacts and cooldowns["teleport"] == 0 and mana >= 20:
-            if hp < mana:
-                priority = health_artifacts if health_artifacts else artifacts
-            else:
-                priority = mana_artifacts if mana_artifacts else artifacts
+        def calculate_incoming_threat(pos, has_shield):
+            """Calculate max damage we might take at this position."""
+            threat = 0
             
-            nearest = min(priority, key=lambda a: chebyshev(self_pos, a["position"]))
-            if chebyshev(self_pos, nearest["position"]) >= 2:
-                return {"move": [0, 0], "spell": {"name": "teleport", "target": nearest["position"]}}
-        
-        # BLINK to nearby artifact
-        if artifacts and cooldowns["blink"] == 0 and mana >= 10:
-            nearest = min(artifacts, key=lambda a: chebyshev(self_pos, a["position"]))
-            art_dist = chebyshev(self_pos, nearest["position"])
-            if 0 < art_dist <= 2:
-                return {"move": [0, 0], "spell": {"name": "blink", "target": nearest["position"]}}
-        
-        # Counter melee if adjacent
-        if manhattan(self_pos, opp_pos) == 1 and cooldowns["melee_attack"] == 0:
-            return {"move": [0, 0], "spell": {"name": "melee_attack", "target": opp_pos}}
-        
-        # Move toward artifacts
-        if artifacts:
-            nearest = min(artifacts, key=lambda a: chebyshev(self_pos, a["position"]))
-            return {"move": move_toward(self_pos, nearest["position"]), "spell": None}
-        
-        # Fallback: kite
-        return {"move": move_away(self_pos, opp_pos), "spell": None}
+            # Fireball threat
+            if opp_mana >= 30 and opp_cooldowns.get("fireball", 99) == 0:
+                if chebyshev(pos, opp_pos) <= 5:
+                    fb_dmg = FIREBALL_DMG
+                    if has_shield:
+                        fb_dmg = max(0, fb_dmg - SHIELD_BLOCK)
+                    threat = max(threat, fb_dmg)
+            
+            # Melee threat
+            if manhattan(pos, opp_pos) == 1 and opp_cooldowns.get("melee_attack", 99) == 0:
+                threat = max(threat, MELEE_DMG)
+            
+            # Minion threat
+            for m in enemy_minions:
+                if manhattan(pos, m["position"]) == 1:
+                    threat += 10
+            
+            return threat
 
-    def _minion_master_mode(self, state, hp_advantage, has_minion):
-        """Minion Master mode - sustain minion pressure like the #1 bot (89% win rate)."""
-        self_data = state["self"]
-        opp_data = state["opponent"]
-        artifacts = state.get("artifacts", [])
-        minions = state.get("minions", [])
-        board_size = state.get("board_size", 10)
-        turn = state.get("turn", 0)
-        
-        self_pos = self_data["position"]
-        opp_pos = opp_data["position"]
-        cooldowns = self_data["cooldowns"]
-        mana = self_data["mana"]
-        hp = self_data["hp"]
-        shield_active = self_data.get("shield_active", False)
-        opp_shield = opp_data.get("shield_active", False)
-        
-        my_minions = [m for m in minions if m["owner"] == self_data["name"]]
-        
-        def chebyshev(a, b):
-            return max(abs(a[0] - b[0]), abs(a[1] - b[1]))
-        
-        def manhattan(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-        
-        def move_toward(start, target):
-            dx = target[0] - start[0]
-            dy = target[1] - start[1]
-            return [
-                1 if dx > 0 else -1 if dx < 0 else 0,
-                1 if dy > 0 else -1 if dy < 0 else 0,
-            ]
-        
-        def move_away(start, threat):
-            dx = start[0] - threat[0]
-            dy = start[1] - threat[1]
-            move_x = 1 if dx > 0 else -1 if dx < 0 else 0
-            move_y = 1 if dy > 0 else -1 if dy < 0 else 0
-            new_x = start[0] + move_x
-            new_y = start[1] + move_y
-            if not (0 <= new_x < board_size):
-                move_x = 0
-            if not (0 <= new_y < board_size):
-                move_y = 0
-            return [move_x, move_y]
-        
-        dist = chebyshev(self_pos, opp_pos)
-        mana_artifacts = [a for a in artifacts if a["type"] == "mana"]
-        
-        # 1. SUMMON minion if we don't have one (HIGHEST PRIORITY - key to #1 bot)
-        if not has_minion and cooldowns["summon"] == 0 and mana >= 50:
-            return {"move": move_toward(self_pos, opp_pos), "spell": {"name": "summon"}}
-        
-        # 2. MELEE if adjacent
-        if manhattan(self_pos, opp_pos) == 1 and cooldowns["melee_attack"] == 0:
-            return {"move": [0, 0], "spell": {"name": "melee_attack", "target": opp_pos}}
-        
-        # 3. Emergency SHIELD
-        if not shield_active and cooldowns["shield"] == 0 and mana >= 20 and hp <= 60 and dist <= 3:
-            return {"move": move_toward(self_pos, opp_pos), "spell": {"name": "shield"}}
-        
-        # 4. Collect MANA artifacts to sustain summoning (critical strategy)
-        if mana < 50 and mana_artifacts:
-            nearest = min(mana_artifacts, key=lambda a: chebyshev(self_pos, a["position"]))
-            art_dist = chebyshev(self_pos, nearest["position"])
+        def score_action(move_vec, spell_name, spell_target=None):
+            """Score a move+spell combination."""
+            new_pos = [self_pos[0] + move_vec[0], self_pos[1] + move_vec[1]]
+            if not is_valid(new_pos):
+                return -99999
             
-            # Teleport to distant mana
-            if cooldowns["teleport"] == 0 and mana >= 20 and art_dist > 3:
-                return {"move": [0, 0], "spell": {"name": "teleport", "target": nearest["position"]}}
+            score = 0
+            sim_hp = hp
+            sim_mana = mana
+            sim_opp_hp = opp_hp
+            sim_shield = shield_active
+            dmg_dealt = 0
             
-            # Blink to nearby mana
-            if cooldowns["blink"] == 0 and mana >= 10 and 0 < art_dist <= 2:
-                return {"move": [0, 0], "spell": {"name": "blink", "target": nearest["position"]}}
-            
-            # Walk toward mana
-            return {"move": move_toward(self_pos, nearest["position"]), "spell": None}
-        
-        # 5. FIREBALL to support minion
-        if has_minion and cooldowns["fireball"] == 0 and mana >= 30 and dist <= 5:
-            return {"move": move_toward(self_pos, opp_pos),
-                    "spell": {"name": "fireball", "target": opp_pos}}
-        
-        # 6. HEAL when needed
-        if hp <= 55 and cooldowns["heal"] == 0 and mana >= 25:
-            return {"move": move_toward(self_pos, opp_pos), "spell": {"name": "heal"}}
-        
-        # 7. Position: Stay at medium range if we have minion, let it work
-        if has_minion and my_minions:
-            minion_pos = my_minions[0]["position"]
-            minion_dist_to_opp = chebyshev(minion_pos, opp_pos)
-            
-            # If minion is close to opponent, support from distance
-            if minion_dist_to_opp <= 3:
-                if dist < 4:
-                    return {"move": move_away(self_pos, opp_pos), "spell": None}
+            # Apply spell effects
+            if spell_name == "fireball" and cooldowns["fireball"] == 0 and mana >= 30:
+                sim_mana -= 30
+                if chebyshev(new_pos, opp_pos) <= 5:
+                    blocked = SHIELD_BLOCK if opp_shield else 0
+                    dmg_dealt = max(0, FIREBALL_DMG - blocked)
+                    sim_opp_hp -= dmg_dealt
+                    
+            elif spell_name == "melee_attack" and cooldowns["melee_attack"] == 0:
+                if spell_target and manhattan(new_pos, spell_target) == 1:
+                    dmg_dealt = MELEE_DMG
+                    sim_opp_hp -= dmg_dealt
+                    
+            elif spell_name == "heal" and cooldowns["heal"] == 0 and mana >= 25:
+                sim_mana -= 25
+                sim_hp = min(100, sim_hp + HEAL_AMT)
+                
+            elif spell_name == "shield" and cooldowns["shield"] == 0 and mana >= 20:
+                sim_mana -= 20
+                sim_shield = True
+                
+            elif spell_name == "summon" and cooldowns["summon"] == 0 and mana >= 50:
+                sim_mana -= 50
+                score += 30  # Minion value
+                
+            elif spell_name == "blink" and cooldowns["blink"] == 0 and mana >= 10:
+                if spell_target and is_valid(spell_target) and chebyshev(new_pos, spell_target) <= 2:
+                    sim_mana -= 10
+                    new_pos = spell_target
                 else:
-                    return {"move": [0, 0], "spell": None}  # Hold position
-            else:
-                # Push opponent toward minion
-                return {"move": move_toward(self_pos, opp_pos), "spell": None}
-        else:
-            # No minion, close gap
-            return {"move": move_toward(self_pos, opp_pos), "spell": None}
+                    return -99999
+                    
+            elif spell_name == "teleport" and cooldowns["teleport"] == 0 and mana >= 20:
+                if spell_target and is_valid(spell_target):
+                    sim_mana -= 20
+                    new_pos = spell_target
+                else:
+                    return -99999
+            
+            # Simulate incoming damage
+            incoming = calculate_incoming_threat(new_pos, sim_shield)
+            sim_hp -= incoming
+            
+            # CRITICAL: Check for death
+            if sim_hp <= 0:
+                return -10000
+            
+            # Check for win
+            if sim_opp_hp <= 0:
+                return 10000
+            
+            # Score components
+            score += sim_hp * W_SURVIVAL  # Survival value
+            score -= sim_opp_hp * W_AGGRO  # Damage dealt value
+            score += sim_mana * 0.5  # Mana conservation
+            
+            # Distance penalty/bonus - favor fireball range
+            dist = chebyshev(new_pos, opp_pos)
+            if 3 <= dist <= 5:
+                score += 25  # Optimal range for fireball - SAFE damage
+            elif dist == 2:
+                score += 15  # Close but not too dangerous
+            elif dist <= 1:
+                score += 5   # Melee only good if we're winning
+            elif dist > 6:
+                score -= 15  # Don't let them escape entirely
+            
+            # Artifact bonus - race to artifacts
+            for a in artifacts:
+                art_dist = manhattan(new_pos, a["position"])
+                opp_art_dist = manhattan(opp_pos, a["position"])
+                if art_dist == 0:
+                    if a["type"] == "health":
+                        # Huge bonus if we're hurt OR it denies opponent
+                        hp_urgency = (100 - hp) / 2  # Up to +50 if low HP
+                        denial_bonus = 40 if opp_hp < 50 else 20  # Deny if opponent wounded
+                        score += 40 + hp_urgency + denial_bonus
+                    elif a["type"] == "mana":
+                        score += 30
+                    else:
+                        score += 20
+                elif art_dist <= 3:
+                    # Race to artifacts - bonus if we're closer than opponent
+                    if a["type"] == "health" and opp_hp < 50:
+                        # Strongly prefer getting to health before wounded opponent
+                        score += 20 if art_dist < opp_art_dist else 5
+                    else:
+                        score += 8 - art_dist * 2
+            
+            # Center control bonus
+            center_dist = manhattan(new_pos, [4, 4])
+            score -= center_dist * 0.5
+            
+            return score
 
+        # Generate all candidate actions
+        candidates = []
+        
+        # All possible moves
+        moves = [[0, 0]]
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                new_pos = [self_pos[0] + dx, self_pos[1] + dy]
+                if is_valid(new_pos):
+                    moves.append([dx, dy])
+        
+        for move in moves:
+            new_pos = [self_pos[0] + move[0], self_pos[1] + move[1]]
+            
+            # No spell
+            s = score_action(move, None)
+            candidates.append((s, move, None))
+            
+            # Fireball
+            if cooldowns["fireball"] == 0 and mana >= 30:
+                if chebyshev(new_pos, opp_pos) <= 5:
+                    s = score_action(move, "fireball", opp_pos)
+                    candidates.append((s, move, {"name": "fireball", "target": opp_pos}))
+            
+            # Melee
+            if cooldowns["melee_attack"] == 0:
+                if manhattan(new_pos, opp_pos) == 1:
+                    s = score_action(move, "melee_attack", opp_pos)
+                    candidates.append((s, move, {"name": "melee_attack", "target": opp_pos}))
+                # Also consider melee on minions
+                for m in enemy_minions:
+                    if manhattan(new_pos, m["position"]) == 1:
+                        s = score_action(move, "melee_attack", m["position"])
+                        candidates.append((s, move, {"name": "melee_attack", "target": m["position"]}))
+            
+            # Heal
+            if cooldowns["heal"] == 0 and mana >= 25:
+                s = score_action(move, "heal")
+                candidates.append((s, move, {"name": "heal"}))
+            
+            # Shield
+            if cooldowns["shield"] == 0 and mana >= 20 and not shield_active:
+                s = score_action(move, "shield")
+                candidates.append((s, move, {"name": "shield"}))
+            
+            # Summon
+            if cooldowns["summon"] == 0 and mana >= 50 and not has_minion:
+                s = score_action(move, "summon")
+                candidates.append((s, move, {"name": "summon"}))
+            
+            # Blink to adjacent positions
+            if cooldowns["blink"] == 0 and mana >= 10:
+                for bx in range(-2, 3):
+                    for by in range(-2, 3):
+                        if bx == 0 and by == 0:
+                            continue
+                        blink_target = [self_pos[0] + bx, self_pos[1] + by]
+                        if is_valid(blink_target) and chebyshev(self_pos, blink_target) <= 2:
+                            s = score_action([0, 0], "blink", blink_target)
+                            candidates.append((s, [0, 0], {"name": "blink", "target": blink_target}))
+            
+            # Teleport to artifacts
+            if cooldowns["teleport"] == 0 and mana >= 20:
+                for a in artifacts:
+                    s = score_action([0, 0], "teleport", a["position"])
+                    candidates.append((s, [0, 0], {"name": "teleport", "target": a["position"]}))
+        
+        # Pick best action
+        if candidates:
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            best = candidates[0]
+            return {"move": best[1], "spell": best[2]}
+        
+        # Fallback
+        return {"move": [0, 0], "spell": None}
