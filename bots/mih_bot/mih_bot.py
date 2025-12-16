@@ -172,10 +172,10 @@ class MihBot(BotInterface):
 
         # ===== PRIORITY 0: IMMEDIATE LETHAL CHECKS =====
         
-        # Melee kills (bypasses shields - critical!)
+        # Melee kills (bypasses shields - melee does 5 damage)
         if adjacent_enemies and cooldowns["melee_attack"] == 0:
             for enemy in adjacent_enemies:
-                if enemy["is_wizard"] and enemy["hp"] <= 10:
+                if enemy["is_wizard"] and enemy["hp"] <= 5:
                     return {"move": [0, 0], "spell": {"name": "melee_attack", "target": enemy["pos"]}}
         
         # Fireball kills (must check shield)
