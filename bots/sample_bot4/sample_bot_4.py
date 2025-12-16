@@ -1,5 +1,3 @@
-Saljem ti ovaj moj sto razbija u lokalu sve
- 
 from bots.bot_interface import BotInterface
  
  
