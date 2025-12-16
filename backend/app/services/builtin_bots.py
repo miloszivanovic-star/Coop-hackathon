@@ -135,7 +135,7 @@ class BuiltinBotRegistry:
             "bot_class": "AIBot",
             "difficulty": "hard",
             "description": "Deep learning-based bot using DQN for optimal strategies",
-        }
+        },
     }
 
     @classmethod
