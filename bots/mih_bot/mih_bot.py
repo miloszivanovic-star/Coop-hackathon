@@ -77,6 +77,49 @@ class MihBot(BotInterface):
             return 0 <= pos[0] < board_size and 0 <= pos[1] < board_size
 
         # =====================================================
+        # EARLY GAME POSITIONING CHECK
+        # If we're far from opponent (started second), optimize opening
+        # =====================================================
+        dist_to_opp = chebyshev(self_pos, opp_pos)
+        is_opening = hp == 100 and opp_hp == 100
+        my_minions_list = [m for m in minions if m["owner"] == self_data["name"]]
+        has_minion_early = len(my_minions_list) > 0
+        
+        if is_opening and dist_to_opp > 6:
+            # PRIORITY 1: Summon minion if we don't have one (helps close gap)
+            if not has_minion_early and cooldowns.get("summon", 99) == 0 and mana >= 50:
+                # Move toward opponent while summoning
+                move_dir = [0, 0]
+                if opp_pos[0] > self_pos[0]: move_dir[0] = 1
+                elif opp_pos[0] < self_pos[0]: move_dir[0] = -1
+                if opp_pos[1] > self_pos[1]: move_dir[1] = 1
+                elif opp_pos[1] < self_pos[1]: move_dir[1] = -1
+                return {"move": move_dir, "spell": {"name": "summon"}}
+            
+            # PRIORITY 2: Use blink to close gap quickly
+            if cooldowns.get("blink", 99) == 0 and mana >= 10:
+                # Blink toward opponent
+                best_blink = None
+                best_dist = dist_to_opp
+                for bx in range(-2, 3):
+                    for by in range(-2, 3):
+                        if bx == 0 and by == 0:
+                            continue
+                        target = [self_pos[0] + bx, self_pos[1] + by]
+                        if is_valid(target) and chebyshev(self_pos, target) <= 2:
+                            new_dist = chebyshev(target, opp_pos)
+                            if new_dist < best_dist:
+                                best_dist = new_dist
+                                best_blink = target
+                if best_blink:
+                    move_dir = [0, 0]
+                    if opp_pos[0] > self_pos[0]: move_dir[0] = 1
+                    elif opp_pos[0] < self_pos[0]: move_dir[0] = -1
+                    if opp_pos[1] > self_pos[1]: move_dir[1] = 1
+                    elif opp_pos[1] < self_pos[1]: move_dir[1] = -1
+                    return {"move": move_dir, "spell": {"name": "blink", "target": best_blink}}
+
+        # =====================================================
         # PRIORITY CHECK: Can we kill opponent THIS TURN?
         # This prevents them from escaping with teleport/blink
         # =====================================================
@@ -113,9 +156,22 @@ class MihBot(BotInterface):
         enemy_minions = [m for m in minions if m["owner"] != self_data["name"]]
         has_minion = len(my_minions) > 0
 
+        # Detect early game by HP (no damage taken yet)
+        is_early_game = hp == 100 and opp_hp == 100
+        
+        # Calculate our distance from center to detect start position disadvantage
+        center = [4, 4]
+        our_center_dist = abs(self_pos[0] - center[0]) + abs(self_pos[1] - center[1])
+        opp_center_dist = abs(opp_pos[0] - center[0]) + abs(opp_pos[1] - center[1])
+        we_are_far_from_center = our_center_dist > opp_center_dist + 2
+
         # Dynamic weights based on game state (IvraBot-inspired)
         W_SURVIVAL = 3.0   # Lower base survival - be aggressive
         W_AGGRO = 20.0     # High base aggro weight
+        
+        # EARLY GAME: If we started far, be slightly more aggressive to close gap
+        if is_early_game and we_are_far_from_center:
+            W_AGGRO = 30.0  # Push harder early when at disadvantage
         
         # Track turns using mana regeneration pattern (10 per turn from 100 start)
         # Estimate turn: late game if both have used significant resources
@@ -270,9 +326,14 @@ class MihBot(BotInterface):
                     else:
                         score += 8 - art_dist * 2
             
-            # Center control bonus
+            # Center control - but reduced when already far (avoid double penalty)
             center_dist = manhattan(new_pos, [4, 4])
-            score -= center_dist * 0.5
+            current_center_dist = manhattan(self_pos, [4, 4])
+            # Reward moving toward center if far, but don't over-penalize staying
+            if center_dist < current_center_dist:
+                score += 3  # Small bonus for moving toward center
+            elif center_dist > 6:
+                score -= 5  # Only penalize if very far from action
             
             return score
 
