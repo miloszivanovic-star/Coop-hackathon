@@ -23,7 +23,7 @@ from bots.bot_interface import BotInterface
 class NindzaTigar(BotInterface):
     def __init__(self):
         self._name = "Nindza Tigar"
-        self._sprite_path = "assets/wizards/nindza_tigar.svg"
+        self._sprite_path = "assets/wizards/nindza-tigar.png"
         self._minion_sprite_path = "assets/minions/nindza_minion.svg"
 
     @property

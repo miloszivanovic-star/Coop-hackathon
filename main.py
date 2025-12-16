@@ -136,7 +136,7 @@ def discover_bots() -> list[BotInterface]:
         dirs[:] = [d for d in dirs if d not in skip_dirs]
 
         for file in files:
-            if file.endswith(".py") and not file.startswith("__") and file != "bot_interface.py":
+            if file.endswith(".py") and not file.startswith("__"):
                 # Construct the module path
                 relative_path = os.path.relpath(root, os.getcwd())
                 module_path = relative_path.replace(os.sep, ".") + "." + file[:-3]
