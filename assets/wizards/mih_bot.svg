@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Chibi Space Marine - Blue Power Armor -->
+  
+  <defs>
+    <linearGradient id="blueArmor" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5B9BD5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2E5C8A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1B3A5A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="darkBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2E5C8A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F2942;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="gunMetal" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#666666;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#333333;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Shadow/Base -->
+  <ellipse cx="50" cy="92" rx="25" ry="5" fill="#000" opacity="0.4"/>
+  
+  <!-- LEGS (short and stumpy, chibi style) -->
+  <!-- Left leg -->
+  <rect x="38" y="70" width="10" height="18" rx="2" fill="url(#blueArmor)" stroke="#000" stroke-width="2"/>
+  <rect x="39" y="72" width="3" height="4" fill="#87CEEB" opacity="0.3"/>
+  <!-- Right leg -->
+  <rect x="52" y="70" width="10" height="18" rx="2" fill="url(#blueArmor)" stroke="#000" stroke-width="2"/>
+  <rect x="58" y="72" width="3" height="4" fill="#87CEEB" opacity="0.3"/>
+  
+  <!-- Boots -->
+  <ellipse cx="43" cy="88" rx="6" ry="4" fill="url(#darkBlue)" stroke="#000" stroke-width="2"/>
+  <ellipse cx="57" cy="88" rx="6" ry="4" fill="url(#darkBlue)" stroke="#000" stroke-width="2"/>
+  
+  <!-- BODY (compact and round) -->
+  <ellipse cx="50" cy="50" rx="22" ry="24" fill="url(#blueArmor)" stroke="#000" stroke-width="2.5"/>
+  
+  <!-- Chest plate details -->
+  <rect x="44" y="45" width="12" height="14" rx="1" fill="url(#darkBlue)" stroke="#000" stroke-width="1.5"/>
+  <!-- Chest vent lines -->
+  <line x1="46" y1="48" x2="54" y2="48" stroke="#87CEEB" stroke-width="1" opacity="0.6"/>
+  <line x1="46" y1="51" x2="54" y2="51" stroke="#87CEEB" stroke-width="1" opacity="0.6"/>
+  <line x1="46" y1="54" x2="54" y2="54" stroke="#87CEEB" stroke-width="1" opacity="0.6"/>
+  
+  <!-- MASSIVE PAULDRONS (shoulder pads - key feature!) -->
+  <!-- Left pauldron -->
+  <ellipse cx="32" cy="42" rx="12" ry="14" fill="url(#blueArmor)" stroke="#000" stroke-width="2.5"/>
+  <path d="M 26 42 Q 32 38 38 42" fill="none" stroke="#000" stroke-width="1.5"/>
+  <circle cx="32" cy="42" r="4" fill="#FFD700" stroke="#000" stroke-width="1"/>
+  
+  <!-- Right pauldron -->
+  <ellipse cx="68" cy="42" rx="12" ry="14" fill="url(#blueArmor)" stroke="#000" stroke-width="2.5"/>
+  <path d="M 62 42 Q 68 38 74 42" fill="none" stroke="#000" stroke-width="1.5"/>
+  <circle cx="68" cy="42" r="4" fill="#FFD700" stroke="#000" stroke-width="1"/>
+  
+  <!-- ARMS (short and thick) -->
+  <!-- Left arm -->
+  <rect x="36" y="50" width="8" height="18" rx="3" fill="url(#blueArmor)" stroke="#000" stroke-width="2" transform="rotate(-15 40 59)"/>
+  <!-- Right arm -->
+  <rect x="56" y="50" width="8" height="18" rx="3" fill="url(#blueArmor)" stroke="#000" stroke-width="2" transform="rotate(15 60 59)"/>
+  
+  <!-- HANDS/WEAPONS -->
+  <!-- Left hand - Bolter pistol -->
+  <g transform="translate(28, 66) rotate(-30)">
+    <rect x="0" y="0" width="8" height="12" rx="1" fill="url(#gunMetal)" stroke="#000" stroke-width="1.5"/>
+    <rect x="2" y="2" width="4" height="3" fill="#333" stroke="#000" stroke-width="0.8"/>
+    <rect x="1" y="8" width="6" height="2" fill="#444"/>
+    <!-- Muzzle -->
+    <rect x="2" y="-2" width="4" height="2" fill="#1a1a1a" stroke="#000" stroke-width="0.8"/>
+  </g>
+  
+  <!-- Right hand - Fist -->
+  <ellipse cx="72" cy="68" rx="5" ry="6" fill="url(#blueArmor)" stroke="#000" stroke-width="2"/>
+  <circle cx="72" cy="68" r="2" fill="#FFD700" stroke="#000" stroke-width="0.8"/>
+  
+  <!-- HEAD/HELMET (large for chibi proportions) -->
+  <ellipse cx="50" cy="28" rx="16" ry="18" fill="url(#blueArmor)" stroke="#000" stroke-width="2.5"/>
+  
+  <!-- Helmet face plate -->
+  <ellipse cx="50" cy="28" rx="13" ry="14" fill="#1E3A5F" stroke="#000" stroke-width="1.5"/>
+  
+  <!-- Glowing red eye lenses (iconic Space Marine look) -->
+  <ellipse cx="44" cy="27" rx="4" ry="5" fill="#FF0000" stroke="#8B0000" stroke-width="1.5"/>
+  <ellipse cx="56" cy="27" rx="4" ry="5" fill="#FF0000" stroke="#8B0000" stroke-width="1.5"/>
+  <!-- Lens highlights -->
+  <ellipse cx="43" cy="25" rx="2" ry="2.5" fill="#FF6666" opacity="0.8"/>
+  <ellipse cx="55" cy="25" rx="2" ry="2.5" fill="#FF6666" opacity="0.8"/>
+  
+  <!-- Respirator grill -->
+  <rect x="46" y="32" width="8" height="4" rx="1" fill="#0F2942" stroke="#000" stroke-width="1.5"/>
+  <line x1="47" y1="33" x2="53" y2="33" stroke="#444" stroke-width="0.8"/>
+  <line x1="47" y1="35" x2="53" y2="35" stroke="#444" stroke-width="0.8"/>
+  
+  <!-- Helmet crest/antenna -->
+  <rect x="49" y="12" width="2" height="6" rx="1" fill="#FFD700" stroke="#000" stroke-width="1"/>
+  <circle cx="50" cy="12" r="2" fill="#FFD700" stroke="#000" stroke-width="1"/>
+  
+  <!-- Forehead Imperial Aquila (eagle) -->
+  <path d="M 50 20 L 48 22 L 50 21 L 52 22 Z" fill="#FFD700" stroke="#000" stroke-width="0.8"/>
+  <circle cx="50" cy="20" r="1" fill="#FFD700"/>
+  
+  <!-- Backpack power unit (visible behind) -->
+  <rect x="44" y="52" width="12" height="8" rx="1" fill="url(#darkBlue)" stroke="#000" stroke-width="1.5"/>
+  <circle cx="47" cy="56" r="1.5" fill="#00FF00" opacity="0.7"/>
+  <circle cx="53" cy="56" r="1.5" fill="#00FF00" opacity="0.7"/>
+  
+  <!-- Purity seal -->
+  <rect x="58" y="48" width="2" height="10" fill="#8B0000" stroke="#000" stroke-width="0.8"/>
+  <path d="M 58 48 L 60 48 L 59 45 Z" fill="#FFD700" stroke="#000" stroke-width="0.8"/>
+  
+  <!-- Battle damage/scratches -->
+  <line x1="54" y1="52" x2="58" y2="54" stroke="#87CEEB" stroke-width="1" opacity="0.4"/>
+  <line x1="42" y1="50" x2="45" y2="52" stroke="#87CEEB" stroke-width="1" opacity="0.4"/>
+</svg>

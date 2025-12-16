@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Combat Servitor / Tech-Priest Minion -->
+  
+  <defs>
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#C0C0C0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#808080;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#505050;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="redRobeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#CC0000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B0000;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00FF00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#006400;stop-opacity:0.3" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Base shadow -->
+  <ellipse cx="50" cy="92" rx="20" ry="4" fill="#000" opacity="0.3"/>
+  
+  <!-- Robe/Body -->
+  <path d="M 35 50 L 32 75 L 32 88 L 68 88 L 68 75 L 65 50 Z" 
+        fill="url(#redRobeGrad)" stroke="#000" stroke-width="1.5"/>
+  
+  <!-- Robe details (cables and tubes) -->
+  <line x1="38" y1="60" x2="38" y2="85" stroke="#333" stroke-width="1.5"/>
+  <line x1="42" y1="58" x2="42" y2="87" stroke="#444" stroke-width="1.2"/>
+  <line x1="58" y1="58" x2="58" y2="87" stroke="#444" stroke-width="1.2"/>
+  <line x1="62" y1="60" x2="62" y2="85" stroke="#333" stroke-width="1.5"/>
+  
+  <!-- Torso (mechanical chest plate) -->
+  <rect x="40" y="45" width="20" height="18" fill="url(#metalGrad)" stroke="#000" stroke-width="1.5" rx="2"/>
+  
+  <!-- Chest cogitator (processor) -->
+  <rect x="46" y="50" width="8" height="8" fill="#333" stroke="#000" stroke-width="1"/>
+  <circle cx="50" cy="54" r="2" fill="#00FF00" opacity="0.6"/>
+  <line x1="48" y1="52" x2="52" y2="56" stroke="#00FF00" stroke-width="0.5" opacity="0.8"/>
+  <line x1="52" y1="52" x2="48" y2="56" stroke="#00FF00" stroke-width="0.5" opacity="0.8"/>
+  
+  <!-- Shoulder joints -->
+  <circle cx="38" cy="48" r="5" fill="url(#metalGrad)" stroke="#000" stroke-width="1.2"/>
+  <circle cx="62" cy="48" r="5" fill="url(#metalGrad)" stroke="#000" stroke-width="1.2"/>
+  
+  <!-- Mechanicus cog symbol -->
+  <circle cx="38" cy="48" r="2.5" fill="#8B0000" stroke="#000" stroke-width="0.5"/>
+  <circle cx="62" cy="48" r="2.5" fill="#8B0000" stroke="#000" stroke-width="0.5"/>
+  
+  <!-- Arms (mechanical with pistons) -->
+  <!-- Left arm -->
+  <line x1="38" y1="53" x2="30" y2="65" stroke="url(#metalGrad)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="31" y1="57" x2="29" y2="57" stroke="#666" stroke-width="1.5"/>
+  <circle cx="30" cy="65" r="2.5" fill="url(#metalGrad)" stroke="#000" stroke-width="1"/>
+  
+  <!-- Right arm -->
+  <line x1="62" y1="53" x2="70" y2="65" stroke="url(#metalGrad)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="69" y1="57" x2="71" y2="57" stroke="#666" stroke-width="1.5"/>
+  <circle cx="70" cy="65" r="2.5" fill="url(#metalGrad)" stroke="#000" stroke-width="1"/>
+  
+  <!-- Left hand - Power Claw -->
+  <path d="M 28 67 L 24 72 L 26 73 L 22 76" fill="none" stroke="url(#metalGrad)" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 30 68 L 26 73 L 28 74 L 24 77" fill="none" stroke="url(#metalGrad)" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="25" cy="74" r="1.5" fill="#FFD700" stroke="#000" stroke-width="0.5"/>
+  
+  <!-- Right hand - Weapon (plasma cutter) -->
+  <rect x="70" y="67" width="3" height="10" fill="url(#metalGrad)" stroke="#000" stroke-width="1" rx="0.5"/>
+  <rect x="70" y="77" width="3" height="3" fill="#4169E1" stroke="#000" stroke-width="0.8"/>
+  <line x1="71.5" y1="80" x2="71.5" y2="84" stroke="#00BFFF" stroke-width="1.5" opacity="0.8"/>
+  
+  <!-- Head/Hood (mechanical skull) -->
+  <ellipse cx="50" cy="38" rx="11" ry="13" fill="url(#metalGrad)" stroke="#000" stroke-width="1.5"/>
+  
+  <!-- Hood (red cowl) -->
+  <path d="M 39 32 Q 39 25 50 24 Q 61 25 61 32 L 61 40 L 58 40 L 42 40 L 39 40 Z" 
+        fill="url(#redRobeGrad)" stroke="#000" stroke-width="1.2"/>
+  
+  <!-- Mechanical eye sockets (glowing green) -->
+  <circle cx="45" cy="37" r="3" fill="url(#eyeGlow)" stroke="#000" stroke-width="1"/>
+  <circle cx="55" cy="37" r="3" fill="url(#eyeGlow)" stroke="#000" stroke-width="1"/>
+  
+  <!-- Eye lenses -->
+  <circle cx="45" cy="36.5" r="1.5" fill="#00FF00" opacity="0.9"/>
+  <circle cx="55" cy="36.5" r="1.5" fill="#00FF00" opacity="0.9"/>
+  <circle cx="44" cy="36" r="0.7" fill="#ADFF2F"/>
+  <circle cx="54" cy="36" r="0.7" fill="#ADFF2F"/>
+  
+  <!-- Respirator/Vox unit -->
+  <rect x="47" y="42" width="6" height="4" fill="#333" stroke="#000" stroke-width="0.8" rx="1"/>
+  <line x1="47" y1="43.5" x2="53" y2="43.5" stroke="#666" stroke-width="0.4"/>
+  <line x1="47" y1="45" x2="53" y2="45" stroke="#666" stroke-width="0.4"/>
+  
+  <!-- Cranial implants -->
+  <rect x="42" y="32" width="2" height="3" fill="url(#metalGrad)" stroke="#000" stroke-width="0.5"/>
+  <rect x="56" y="32" width="2" height="3" fill="url(#metalGrad)" stroke="#000" stroke-width="0.5"/>
+  <circle cx="43" cy="31" r="1" fill="#FF0000" opacity="0.7"/>
+  <circle cx="57" cy="31" r="1" fill="#FF0000" opacity="0.7"/>
+  
+  <!-- Mechanicus cog on forehead -->
+  <circle cx="50" cy="33" r="2.5" fill="#8B0000" stroke="#FFD700" stroke-width="0.8"/>
+  <path d="M 48 33 L 52 33 M 50 31 L 50 35" stroke="#FFD700" stroke-width="0.5"/>
+  
+  <!-- Data cables from head -->
+  <path d="M 39 40 Q 36 42 35 48" fill="none" stroke="#333" stroke-width="1.5"/>
+  <path d="M 61 40 Q 64 42 65 48" fill="none" stroke="#333" stroke-width="1.5"/>
+  
+  <!-- Power pack on back (visible) -->
+  <rect x="46" y="46" width="8" height="4" fill="url(#metalGrad)" stroke="#000" stroke-width="1"/>
+  <rect x="48" y="47" width="1.5" height="2" fill="#00FF00" opacity="0.6"/>
+  <rect x="50.5" y="47" width="1.5" height="2" fill="#00FF00" opacity="0.6"/>
+  
+  <!-- Lower robe details (armored segments) -->
+  <rect x="35" y="75" width="30" height="3" fill="url(#metalGrad)" stroke="#000" stroke-width="0.8" rx="0.5"/>
+  <rect x="37" y="82" width="26" height="2" fill="url(#metalGrad)" stroke="#000" stroke-width="0.6" rx="0.3"/>
+  
+  <!-- Base/Tracks (instead of legs) -->
+  <rect x="35" y="88" width="30" height="6" fill="#333" stroke="#000" stroke-width="1.5" rx="1"/>
+  <rect x="37" y="89" width="4" height="4" fill="#666" rx="0.5"/>
+  <rect x="43" y="89" width="4" height="4" fill="#666" rx="0.5"/>
+  <rect x="49" y="89" width="4" height="4" fill="#666" rx="0.5"/>
+  <rect x="55" y="89" width="4" height="4" fill="#666" rx="0.5"/>
+  <rect x="61" y="89" width="4" height="4" fill="#666" rx="0.5"/>
+  
+  <!-- Exhaust vents -->
+  <circle cx="42" cy="91" r="0.8" fill="#FF4500" opacity="0.6"/>
+  <circle cx="58" cy="91" r="0.8" fill="#FF4500" opacity="0.6"/>
+  
+  <!-- Purity seals -->
+  <rect x="55" y="52" width="1.5" height="6" fill="#FFF8DC" stroke="#000" stroke-width="0.3"/>
+  <path d="M 55 52 L 56.5 52 L 56 50.5 Z" fill="#8B0000" stroke="#000" stroke-width="0.3"/>
+  
+  <!-- Binary inscriptions on robe -->
+  <text x="44" y="70" font-family="monospace" font-size="3" fill="#FFD700" opacity="0.6">01</text>
+  <text x="44" y="73" font-family="monospace" font-size="3" fill="#FFD700" opacity="0.6">10</text>
+</svg>

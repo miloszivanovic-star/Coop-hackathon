@@ -177,3 +177,5 @@ bandit-report.json
 
 # Claude Code
 .claude/settings.local.json
+elite_genetic_optimizer.py
+evaluate_all.py
